@@ -17,6 +17,7 @@ static class SensorConstants {
     static final String camera1 = "Camera1";
     static final String camera2 = "Camera2";
     static final String camera3 = "Camera3";
+    static final String camera4 = "Camera4";
     
 }
 }

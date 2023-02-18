@@ -13,6 +13,7 @@ import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.math.geometry.Pose3d;
 import edu.wpi.first.math.geometry.Rotation2d;
 import edu.wpi.first.math.geometry.Transform2d;
+import edu.wpi.first.math.geometry.Translation2d;
 import edu.wpi.first.networktables.GenericEntry;
 import edu.wpi.first.wpilibj.shuffleboard.Shuffleboard;
 import edu.wpi.first.wpilibj.shuffleboard.ShuffleboardTab;
@@ -23,7 +24,7 @@ public class PhotonVision extends SubsystemBase {
     PhotonPoseEstimator photonPoseEstimator;
     GenericEntry robotPosTrue;
     AprilTagFieldLayout aprilTagFieldLayout;
-    PiCamera camera1, camera2, camera3;
+    PiCamera camera1, camera2, camera3, camera4;
     PiCamera[] cameras;
     DecimalFormat gayDecimalFormat = new DecimalFormat("##.000");
 
@@ -38,11 +39,10 @@ public class PhotonVision extends SubsystemBase {
            // photonPoseEstimator = new PhotonPoseEstimator(aprilTagFieldLayout, PoseStrategy.CLOSEST_TO_REFERENCE_POSE, PhotonVision.photonCamera1, VisionConstants.robotToCam);
         }catch(IOException e) {}
 
-        camera1 = new PiCamera(SensorConstants.camera1, aprilTagFieldLayout, SensorConstants.robotToCam);
-        camera2 = new PiCamera(SensorConstants.camera2, aprilTagFieldLayout, SensorConstants.robotToCam);
         camera3 = new PiCamera(SensorConstants.camera3, aprilTagFieldLayout, SensorConstants.robotToCam);
+        camera4 = new PiCamera(SensorConstants.camera4, aprilTagFieldLayout, SensorConstants.robotToCam);
 
-        PiCamera[] cameras = {camera1, camera2, camera3};
+        PiCamera[] cameras = {camera3, camera4};
         this.cameras = cameras;
     }
 
@@ -68,36 +68,38 @@ public class PhotonVision extends SubsystemBase {
         swerveSubsystem.resetOdometry(new Pose2d(robotPos[0],robotPos[1],new Rotation2d(swerveSubsystem.getHeading())));
     }*/
 
-    public double[] getAvgRobotPose() {
-        double[] robotPos = {0,0};
+    public Translation2d getAvgRobotPose() {
+        // This uses the data from the cameras to compute an average position
+        Translation2d robotCoords = new Translation2d();
         int numOfTargets = 0;
 
-        for(int i = 0; i < cameras.length; i++){
-            if(cameras[i].getAprilTagID() != -1) {
+        for (int i = 0; i < cameras.length; i++) {
+            if (cameras[i].getAprilTagID() != -1) {
+                // Changes the calculation based on the amount of april tags we can see.
+                // The more april tags we see, the more accurate the calculation will be.
                 Pose3d camPos = cameras[i].getRobotFieldPose();
-                robotPos[0] = robotPos[0] + camPos.getX();
-                robotPos[1] = robotPos[1] + camPos.getY();
+                robotCoords = robotCoords.plus(camPos.getTranslation().toTranslation2d());
                 numOfTargets++;
-            } 
+            }
         }
 
-        if(numOfTargets != 0){
-            robotPos[0] = robotPos[0]/numOfTargets;
-            robotPos[1] = robotPos[1]/numOfTargets;
-            robotPosTrue.setString("X: "+gayDecimalFormat.format((robotPos[0])+" Y: "+gayDecimalFormat.format((robotPos[1]))));
-            return robotPos;
-            
-        }else {
-            System.out.println("Can't find pos because no target seen!");
-            return null;
+        if (numOfTargets != 0) {
+            // Sets the position in x and y based on the april tags.
+            // Also formats the amount of decimals with a fancy gayDecimalFormat.
+            robotCoords = robotCoords.div(numOfTargets);
+
+            robotPosTrue.setString(
+                    "X: " + gayDecimalFormat.format(robotCoords.getX()) + " Y: " + gayDecimalFormat.format(robotCoords.getY()));
+            return robotCoords;
         }
-        
+            
+        System.out.println("Can't find pos because no target seen!");
+        return null;
     }
 
     @Override
     public void periodic() {
-        camera1.updateShuffleBoard();
-        camera2.updateShuffleBoard();
         camera3.updateShuffleBoard();
+        camera4.updateShuffleBoard();
     }   
 }

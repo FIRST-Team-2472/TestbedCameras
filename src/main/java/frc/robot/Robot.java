@@ -27,6 +27,7 @@ public class Robot extends TimedRobot {
   @Override
   public void robotPeriodic() {
     photonVision.periodic();
+    photonVision.getAvgRobotPose();
   }
 
   @Override

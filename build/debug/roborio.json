@@ -4,6 +4,6 @@
     "name": "frcJava",
     "port": 8349,
     "target": "10.24.72.2",
-    "project": "Testbed-PhotonVision"
+    "project": "TestbedCameras"
   }
 ]
